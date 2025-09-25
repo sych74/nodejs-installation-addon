@@ -106,6 +106,6 @@ if (jps.type == "install") {
             {"type": "displayfield", "cls": "warning", "height": 30, "hideLabel": true, "markup": old_distro_markup}
         )
     }
-    jps.settings.main.fields[0].default = '${settings.version}';
+    jps.settings.main.fields[0].default = '${settings.minorVersion}';
     return settings;
 }
