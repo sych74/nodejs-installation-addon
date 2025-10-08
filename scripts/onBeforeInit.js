@@ -93,14 +93,14 @@ if (jps.type == "install") {
     return { result: 0, settings: jps.settings };
 } else {
     jps.settings.main.fields.push(
-        {"type": "displayfield", "cls": "warning", "height": 30, "hideLabel": true, "markup": "NodeJS® version currently installed on this layer is ${settings.minorVersion}"}
+        {"type": "displayfield", "cls": "warning", "height": 30, "hideLabel": true, "markup": "The currently installed Node.js version is ${settings.minorVersion}."}
     )
     var old_distro_markup = "", baseUrl = jps.baseUrl;
     var checkDistroCmd = "wget -O /root/check_distro.sh " + baseUrl + "/scripts/check_distro.sh 2>/dev/null; bash /root/check_distro.sh"
     resp = api.env.control.ExecCmdById('${env.envName}', session, '${globals.masterId}', toJSON([{ command: checkDistroCmd }]), true, "root");
     if (resp.result !== 0) return resp;
     if (resp.responses[0].out == "Non-supported") {
-        old_distro_markup = "NodeJS® versions newer than 16 needs Linux distribution with GlibC version 2.28 or higher and cannot be chosen for current layer."
+        old_distro_markup = "Node.js versions newer than 16 cannot be chosen for the current layer, as they need an OS distribution with glibc 2.28 or higher."
         jps.settings.main.fields[0].values = [{"value":"16.20.2","caption":"16.20.2"},{"value":"16.20.1","caption":"16.20.1"},{"value":"16.20.0","caption":"16.20.0"}];
         jps.settings.main.fields.push(
             {"type": "displayfield", "cls": "warning", "height": 30, "hideLabel": true, "markup": old_distro_markup}

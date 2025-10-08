@@ -1,13 +1,15 @@
 version: '1.8.1'
 type: install
 id: 'certified-nodejs-installer'
-name: 'Node.js® and NPM installer for certified templates'
+name: 'Node.js and NPM Installer'
 homepage: https://nodejs.org/en/
 baseUrl: https://raw.githubusercontent.com/dimkadt/nodejs-installation-addon/main
-description: Installs Node.js® - a JavaScript runtime built on Chrome's V8 JavaScript engine - into the nodes based VAP certified templates. Node.js® uses an event-driven, non-blocking I/O model that makes it lightweight and efficient. Node.js' package ecosystem, npm, is the largest ecosystem of open source libraries in the world.
+description: 
+  text: The **Node.js and NPM Installer** solution allows adding Node.js, a cross-platform JavaScript runtime, to any certified container on the Virtuozzo Application Platform. Node.js installation grants you access to the *npm* package ecosystem - one of the largest ecosystems of open-source libraries in the world.
+  short: Automatically installs the required version of Node.js for your containers and grants access to the NPM package manager.
 categories:
   - apps/dev-and-admin-tools
-logo: https://raw.githubusercontent.com/dimkadt/nodejs-installation-addon/main/images/node.png
+logo: images/node.png
 
 targetNodes:
   nodeType:
@@ -71,36 +73,10 @@ settings:
     fields:                    
       - type: list
         name: minorVersion
-        caption: Node.js® version
+        caption: Node.js Version
         required: true
         editable: true
         forceSelection: true
-        values:
-          - value: 21.4.0
-            caption: 21.4.0
-          - value: 21.3.0
-            caption: 21.3.0
-          - value: 21.2.0
-            caption: 21.2.0
-          - value: 20.10.0
-            caption: 20.10.0
-          - value: 20.9.0
-            caption: 20.9.0
-          - value: 20.8.1
-            caption: 20.8.1
-          - value: 18.19.0
-            caption: 18.19.0
-          - value: 18.18.2
-            caption: 18.18.2
-          - value: 18.18.1
-            caption: 18.18.1
-          - value: 16.20.2
-            caption: 16.20.2
-          - value: 16.20.1
-            caption: 16.20.1
-          - value: 16.20.0
-            caption: 16.20.0
-        default: 16.20.2
 
       - type: spacer
 
@@ -112,7 +88,7 @@ settings:
 
       - type: list
         name: nodeGroups
-        caption: Node Group(s)
+        caption: Layer(s)
         required: true
         multiSelect: true
         dependsOn:
@@ -130,4 +106,4 @@ onInstall:
         minorVersion: ${settings.minorVersion}
 
 success:
-  text: Node.js® runtime version ${settings.minorVersion} has been successfully installed on environment ${settings.envName}
+  text: Node.js runtime version **${settings.minorVersion}** has been successfully installed on the **${settings.envName}** environment.
