@@ -3,7 +3,7 @@ type: update
 id: 'certified-nodejs-installer'
 name: 'Node.js and NPM Installer'
 homepage: https://nodejs.org/en/
-baseUrl: https://raw.githubusercontent.com/dimkadt/nodejs-installation-addon/main
+baseUrl: https://raw.githubusercontent.com/jelastic-jps/nodejs-installation-addon/main
 description: 
   text: The **Node.js and NPM Installer** solution allows adding Node.js, a cross-platform JavaScript runtime, to any certified container on the Virtuozzo Application Platform. Node.js installation grants you access to the *npm* package ecosystem - one of the largest ecosystems of open-source libraries in the world.
   short: Automatically installs the required version of Node.js for your containers and grants access to the NPM package manager.
