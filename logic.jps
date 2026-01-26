@@ -161,14 +161,22 @@ actions:
         ${globals.osPackageManager} makecache
       user: root
     - cmd [${targetNodes.nodeGroup}]: |-
-        if ! ${globals.osPackageManager} install nodejs-${settings.minorVersion} -y 2>&1; then
-          echo "INSTALL_FAILED"
-          exit 0
+        INSTALL_OUTPUT=$(${globals.osPackageManager} install nodejs-${settings.minorVersion} -y 2>&1)
+        INSTALL_EXIT=$?
+        if [ $INSTALL_EXIT -ne 0 ]; then
+          if echo "$INSTALL_OUTPUT" | grep -q "No package matches"; then
+            echo "$INSTALL_OUTPUT"
+            echo "PACKAGE_NOT_FOUND"
+            exit 0
+          else
+            echo "$INSTALL_OUTPUT" >&2
+            exit $INSTALL_EXIT
+          fi
         fi
       user: root
-    - if (response.out.indexOf("INSTALL_FAILED") != -1):
+    - if (response.out.indexOf("PACKAGE_NOT_FOUND") != -1):
       - stopEvent:
-          type: error
+          type: warning
           message: Failed to install Node.js version ${settings.minorVersion}. This version may not be available in the NodeSource repository. Please select a different version from the available options.
     - cmd [${targetNodes.nodeGroup}]: |-
         curl -sL https://dl.yarnpkg.com/rpm/yarn.repo > /etc/yum.repos.d/yarn.repo && ${globals.osPackageManager} -y install yarn && yum-config-manager --disable yarn nodesource-nsolid nodesource-nodejs
