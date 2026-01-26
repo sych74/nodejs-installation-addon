@@ -166,7 +166,7 @@ actions:
           exit 0
         fi
       user: root
-    - if (response.out.contains("INSTALL_FAILED")):
+    - if (response.out.indexOf("INSTALL_FAILED") != -1):
       - stopEvent:
           type: error
           message: Failed to install Node.js version ${settings.minorVersion}. This version may not be available in the NodeSource repository. Please select a different version from the available options.
