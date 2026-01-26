@@ -158,7 +158,16 @@ actions:
         ${globals.osPackageManager} clean all
         NODEJS_MAJOR_VERSION=$(echo ${settings.minorVersion} | awk -F . '{print $1}')
         curl -fsSL https://rpm.nodesource.com/setup_${NODEJS_MAJOR_VERSION}.x | bash - 
-        ${globals.osPackageManager} install nodejs-${settings.minorVersion} -y &&
+        ${globals.osPackageManager} makecache
+      user: root
+    - cmd [${targetNodes.nodeGroup}]: |-
+        ${globals.osPackageManager} install nodejs-${settings.minorVersion} -y
+      user: root
+    - if (response.result != 0):
+      - stopEvent:
+          type: error
+          message: Failed to install Node.js version ${settings.minorVersion}. This version may not be available in the NodeSource repository. Please select a different version from the available options.
+    - cmd [${targetNodes.nodeGroup}]: |-
         curl -sL https://dl.yarnpkg.com/rpm/yarn.repo > /etc/yum.repos.d/yarn.repo && ${globals.osPackageManager} -y install yarn && yum-config-manager --disable yarn nodesource-nsolid nodesource-nodejs
         ${globals.osPackageManager} clean all
       user: root
