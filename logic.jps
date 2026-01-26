@@ -161,9 +161,12 @@ actions:
         ${globals.osPackageManager} makecache
       user: root
     - cmd [${targetNodes.nodeGroup}]: |-
-        ${globals.osPackageManager} install nodejs-${settings.minorVersion} -y
+        if ! ${globals.osPackageManager} install nodejs-${settings.minorVersion} -y 2>&1; then
+          echo "INSTALL_FAILED"
+          exit 0
+        fi
       user: root
-    - if (response.result != 0):
+    - if (response.out.contains("INSTALL_FAILED")):
       - stopEvent:
           type: error
           message: Failed to install Node.js version ${settings.minorVersion}. This version may not be available in the NodeSource repository. Please select a different version from the available options.
