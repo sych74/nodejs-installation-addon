@@ -1,5 +1,5 @@
 version: '1.8.1'
-type: install
+type: update
 id: 'certified-nodejs-installer'
 name: 'Node.js and NPM Installer'
 homepage: https://nodejs.org/en/
@@ -22,12 +22,15 @@ targetNodes:
     - couchbase
     - dotnet
     - glassfish
+    - glassfish3
+    - glassfish4
     - golang
     - haproxy
     - javaengine
     - jenkins
     - jenkins2
     - jetty
+    - jetty6
     - kubernetes
     - lemp
     - litespeedadc
@@ -38,6 +41,8 @@ targetNodes:
     - mariadb-dockerized
     - memcached
     - memcached-dockerized
+    - mongodb
+    - mongodb-dockerized
     - mysql
     - mysql5
     - nginx
@@ -50,18 +55,23 @@ targetNodes:
     - opensearch1
     - payara
     - perconadb
+    - postgres10
+    - postgres11
+    - postgres12
     - postgres13
     - postgres14
-    - postgres15
-    - postgres16
-    - postgres17
+    - postgres9
     - postgresql
+    - redis
+    - redis6
     - springboot
     - storage
     - tomcat
+    - tomcat6
+    - tomcat7
+    - tomcat8
+    - tomcat85
     - tomcat9
-    - tomcat10
-    - tomcat11
     - tomee
     - tomee-dockerized
     - varnish
@@ -70,7 +80,7 @@ targetNodes:
 
 settings:
   main:
-    fields:                    
+    fields:          
       - type: list
         name: minorVersion
         caption: Node.js Version
@@ -78,32 +88,140 @@ settings:
         editable: true
         forceSelection: true
 
-      - type: spacer
+onBeforeInit: |
+  var resp=api.environment.control.GetTemplates();
+  if (resp.result !== 0) return resp;
+  for (var i = 0, n = resp.array.length; i < n; i++) {
+      if ( resp.array[i].nodeType == "nodejs" ) {
+          const nodejsAliases = resp.array[i].nodeTypeAliases.map(item => item.substring(6, 8))
+          majorVersions = nodejsAliases.filter((value, index, array) => nodejsAliases.indexOf(value) === index).sort();
+          var minorVersionsList = [];
+          for (var j = 0, m = resp.array[i].tags.length; j < m; j++) {
+              tag = resp.array[i].tags[j].name;
+              minorVersion = tag.substring(0, tag.indexOf('-'));
+              minorVersionsList.push(minorVersion);
+              minorVersionsSorted = minorVersionsList.filter((value, index, array) => minorVersionsList.indexOf(value) === index).sort();
+              minorVersions = minorVersionsSorted.reverse();
+          }
+      }
+  }
+  jps.settings.main.fields[0].values = [];
 
-      - type: list
-        name: envName
-        caption: Environment
-        required: true
-        values: []
+  for (var j = 0, m = minorVersions.length; j < m; j++) {
+      jps.settings.main.fields[0].values.push({
+          value: minorVersions[j],
+          caption: minorVersions[j]
+      })
+  }
 
-      - type: list
-        name: nodeGroups
-        caption: Layer(s)
-        required: true
-        multiSelect: true
-        dependsOn:
-          envName: {}
+  return {
+      result: 0,
+      settings: jps.settings
+  };
 
-onBeforeInit: /scripts/onBeforeInit.js
+buttons:
+  - caption: Change Node.js Version
+    loadingText: Installing..
+    settings: main
+    confirmText: Are you sure you want to change Node.js version?
+    action: install
+
+onAfterRedeployContainer:
+  - install
+
+onAfterAddNode:
+  - install
+
+onAfterCloneNodes:
+  - install
 
 onInstall:
-  - install [${settings.nodeGroups}]:
-      envName: ${settings.envName}
-      jps: logic.jps?_r=${fn.random}
-      settings:
-        nodeGroups: ${settings.nodeGroups}
-        envName: ${settings.envName}
-        minorVersion: ${settings.minorVersion}
+  - install
+
+onUninstall:
+  - uninstall
 
 success:
-  text: Node.js runtime version **${settings.minorVersion}** has been successfully installed on the **${settings.envName}** environment.
+  text: Node.js runtime version **${settings.minorVersion}** has been successfully installed.
+
+actions:
+  install:
+    - getMasterId
+    - cmd[${globals.masterId}]: |-
+        wget -O /root/check_distro.sh ${baseUrl}/scripts/check_distro.sh 2>/dev/null;
+        bash /root/check_distro.sh;
+      user: root
+    - if (!"${settings.minorVersion}".startsWith('16')):
+      - if (response.out == "Non-supported"):
+        - stopEvent:
+            type: warning
+            message: Installation of Node.js version higher than 16 is not supported for the selected layer because the glibc version is lower than 2.28. Please use Node.js 16 or consider upgrading to a newer OS version for the selected layer.
+    - else:
+      - if (response.out == "AlmaLinux"):
+        - stopEvent:
+            type: warning
+            message: Node.js 16 is no longer actively supported! For containers based on AlmaLinux, use an active Long Term Support (LTS) version of Node.js.
+    - cmd [${globals.masterId}]: |-
+        if which microdnf &>/dev/null; then
+            OS_PACKAGE_MANAGER="microdnf"
+        else
+            OS_PACKAGE_MANAGER="yum"
+        fi
+        echo ${OS_PACKAGE_MANAGER}
+      user: root
+    - setGlobals: 
+        osPackageManager: ${response.out}
+    - cmd [${targetNodes.nodeGroup}]: |-
+        ${globals.osPackageManager} -y install yum-utils
+        yum-config-manager --disable mariadb || true;
+      user: root
+    - uninstall
+    - cmd [${targetNodes.nodeGroup}]: |-
+        ${globals.osPackageManager} clean all
+        NODEJS_MAJOR_VERSION=$(echo ${settings.minorVersion} | awk -F . '{print $1}')
+        curl -fsSL https://rpm.nodesource.com/setup_${NODEJS_MAJOR_VERSION}.x | bash - 
+        ${globals.osPackageManager} makecache
+      user: root
+    - cmd [${targetNodes.nodeGroup}]: |-
+        INSTALL_OUTPUT=$(${globals.osPackageManager} install nodejs-${settings.minorVersion} -y 2>&1)
+        INSTALL_EXIT=$?
+        if [ $INSTALL_EXIT -ne 0 ]; then
+          if echo "$INSTALL_OUTPUT" | grep -q "No package matches"; then
+            echo "$INSTALL_OUTPUT"
+            echo "PACKAGE_NOT_FOUND"
+            exit 0
+          else
+            echo "$INSTALL_OUTPUT" >&2
+            exit $INSTALL_EXIT
+          fi
+        fi
+      user: root
+    - if (response.out.indexOf("PACKAGE_NOT_FOUND") != -1):
+      - stopEvent:
+          type: warning
+          message: Failed to install Node.js version ${settings.minorVersion}. This version may not be available in the NodeSource repository. Please select a different version from the available options.
+    - cmd [${targetNodes.nodeGroup}]: |-
+        curl -sL https://dl.yarnpkg.com/rpm/yarn.repo > /etc/yum.repos.d/yarn.repo && ${globals.osPackageManager} -y install yarn && yum-config-manager --disable yarn nodesource-nsolid nodesource-nodejs
+        ${globals.osPackageManager} clean all
+      user: root
+    - cmd [${targetNodes.nodeGroup}]: |-
+        wget ${baseUrl}/configs/nodejs -O /etc/sudoers.d/nodejs
+        npm update npm; chown -R 700:700 /usr/lib/node_modules
+      user: root
+    - cmd [${targetNodes.nodeGroup}]:
+        - echo -e "export PATH=/usr/lib/node_modules:$HOME/node_modules/.bin:$PATH" >> $HOME/.bashrc;
+
+  uninstall:
+    - cmd [${targetNodes.nodeGroup}]: |-
+        ${globals.osPackageManager} -y remove nodejs yarn 2>&1;
+        rm -rf $HOME/node_modules /etc/sudoers.d/nodejs 2>&1;
+        sed -ci -e "/node_modules/d" $HOME/.bashrc 2>&1;
+      user: root
+
+  getMasterId:
+    - forEach(nodes.${targetNodes.nodeGroup}):
+      - cmd[${@i.id}]: |- 
+          source /.jelenv;  
+          echo ${MASTER_ID};
+      - setGlobals:
+          masterId: ${response.out}
