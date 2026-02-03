@@ -24,88 +24,56 @@ for (var j = 0, m = minorVersions.length; j < m; j++) {
     })
 }
 
-if (!majorVersions.includes("16")){
-    jps.settings.main.fields[0].values.push({
-        value: "16.20.2",
-        caption: "16.20.2"
-    });
-    jps.settings.main.fields[0].values.push({
-        value: "16.20.1",
-        caption: "16.20.1"
-    });
-    jps.settings.main.fields[0].values.push({
-        value: "16.20.0",
-        caption: "16.20.0"
-    });
+var envName = env.envName;
+var masterId = null;
+
+var targetNodeGroup = typeof targetNodes !== 'undefined' && targetNodes.nodeGroup ? targetNodes.nodeGroup : null;
+if (!targetNodeGroup && settings.nodeGroups) {
+    targetNodeGroup = Array.isArray(settings.nodeGroups) ? settings.nodeGroups[0] : settings.nodeGroups;
 }
 
-jps.settings.main.fields[0].default = minorVersions[0];
-
-if (jps.type == "install") {
-
-    var resp = jelastic.env.control.GetEnvs();
-    if (resp.result !== 0) return resp;
-    let supportedNodeTypes = jps.targetNodes.nodeType;
-    var envs = [], nodes = {}, stackVersion, envCaption;
-
-    for (var i = 0, envInfo, env; envInfo = resp.infos[i]; i++) {
-        env = envInfo.env;
-
-    if (env.status == 1) {
-        for (var j = 0, node; node = envInfo.nodes[j]; j++) {
-            nodes[env.envName] = nodes[env.envName] || [];
-            nodes[env.envName].groups = nodes[env.envName].groups || {};
-
-            var stackVersion = node.version;
-
-            if (supportedNodeTypes.indexOf(String(node.nodeType)) != -1) {
-                if (!nodes[env.envName].groups[node.nodeGroup]) {
-                    nodes[env.envName].push({
-                        value: node.nodeGroup,
-                        caption: node.name + ' (' + node.nodeGroup + ')'
-                    }); 
+if (targetNodeGroup) {
+    var envResp = jelastic.env.control.GetEnvInfo(envName);
+    if (envResp.result === 0 && envResp.nodes && envResp.nodes.length > 0) {
+        // Ищем ноду из нужной группы
+        for (var k = 0; k < envResp.nodes.length; k++) {
+            if (envResp.nodes[k].nodeGroup === targetNodeGroup) {
+                var nodeId = envResp.nodes[k].id;
+                var cmdResp = api.env.control.ExecCmdById(envName, session, nodeId, toJSON([{ command: "source /.jelenv; echo ${MASTER_ID}" }]), true, "root");
+                if (cmdResp.result === 0 && cmdResp.responses && cmdResp.responses[0] && cmdResp.responses[0].out) {
+                    masterId = cmdResp.responses[0].out.trim();
+                    break;
                 }
             }
- 
-            nodes[env.envName].groups[node.nodeGroup] = true;
         }
-
-        if (nodes[env.envName] && nodes[env.envName].length > 0) {
-            if ( typeof env.displayName !== 'undefined'  ) {
-                envCaption = env.displayName + ' (' + env.envName + ')';
-            } else {
-                envCaption = env.envName;
-        }
-        envs.push({
-            value: env.envName,
-            caption: envCaption
-        });
-        }
-      }
     }
+}
 
-    if (envs.length > 0) {
-        jps.settings.main.fields[2].values = envs;
-        jps.settings.main.fields[2].value = envs[0].value;
-        jps.settings.main.fields[3].dependsOn.envName = nodes;
-    }
-
-    return { result: 0, settings: jps.settings };
-} else {
+if (settings.minorVersion) {
     jps.settings.main.fields.push(
         {"type": "displayfield", "cls": "warning", "height": 30, "hideLabel": true, "markup": "The currently installed Node.js version is ${settings.minorVersion}."}
     )
-    var old_distro_markup = "", baseUrl = jps.baseUrl;
+}
+
+var old_distro_markup = "", baseUrl = jps.baseUrl;
+
+if (masterId) {
     var checkDistroCmd = "wget -O /root/check_distro.sh " + baseUrl + "/scripts/check_distro.sh 2>/dev/null; bash /root/check_distro.sh"
-    resp = api.env.control.ExecCmdById('${env.envName}', session, '${globals.masterId}', toJSON([{ command: checkDistroCmd }]), true, "root");
-    if (resp.result !== 0) return resp;
-    if (resp.responses[0].out == "Non-supported") {
+    resp = api.env.control.ExecCmdById(envName, session, masterId, toJSON([{ command: checkDistroCmd }]), true, "root");
+    if (resp.result !== 0) {
+        resp = { result: 0, responses: [{ out: "" }] };
+    }
+    if (resp.responses && resp.responses[0] && resp.responses[0].out == "Non-supported") {
         old_distro_markup = "Node.js versions newer than 16 cannot be chosen for the current layer, as they need an OS distribution with glibc 2.28 or higher."
         jps.settings.main.fields[0].values = [{"value":"16.20.2","caption":"16.20.2"},{"value":"16.20.1","caption":"16.20.1"},{"value":"16.20.0","caption":"16.20.0"}];
         jps.settings.main.fields.push(
             {"type": "displayfield", "cls": "warning", "height": 30, "hideLabel": true, "markup": old_distro_markup}
         )
     }
-    jps.settings.main.fields[0].default = '${settings.minorVersion}';
-    return settings;
 }
+
+if (settings.minorVersion) {
+    jps.settings.main.fields[0].default = '${settings.minorVersion}';
+}
+
+return settings;

@@ -7,6 +7,8 @@ baseUrl: https://raw.githubusercontent.com/sych74/nodejs-installation-addon/main
 description: 
   text: The **Node.js and NPM Installer** solution allows adding Node.js, a cross-platform JavaScript runtime, to any certified container on the Virtuozzo Application Platform. Node.js installation grants you access to the *npm* package ecosystem - one of the largest ecosystems of open-source libraries in the world.
   short: Automatically installs the required version of Node.js for your containers and grants access to the NPM package manager.
+categories:
+  - apps/dev-and-admin-tools
 logo: images/node.png
 
 targetNodes:
@@ -83,21 +85,8 @@ settings:
         name: minorVersion
         caption: Node.js Version
         required: true
-        dependsOn:
-          version:
-            16:
-            - value: 16.20.2
-              caption: 16.20.2
-            - value: 16.20.1
-              caption: 16.20.1
-            - value: 16.20.0
-              caption: 16.20.0
-            18:
-            - value: latest
-              caption: latest
-            20:
-            - value: latest
-              caption: latest
+        editable: true
+        forceSelection: true
     onBeforeInit: /scripts/onBeforeInit.js
 
 buttons:
@@ -121,6 +110,9 @@ onInstall:
 
 onUninstall:
   - uninstall
+
+success:
+  text: Node.js runtime version **${settings.minorVersion}** has been successfully installed.
 
 actions:
   install:
