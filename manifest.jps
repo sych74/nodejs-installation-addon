@@ -22,15 +22,12 @@ targetNodes:
     - couchbase
     - dotnet
     - glassfish
-    - glassfish3
-    - glassfish4
     - golang
     - haproxy
     - javaengine
     - jenkins
     - jenkins2
     - jetty
-    - jetty6
     - kubernetes
     - lemp
     - litespeedadc
@@ -41,8 +38,6 @@ targetNodes:
     - mariadb-dockerized
     - memcached
     - memcached-dockerized
-    - mongodb
-    - mongodb-dockerized
     - mysql
     - mysql5
     - nginx
@@ -55,23 +50,18 @@ targetNodes:
     - opensearch1
     - payara
     - perconadb
-    - postgres10
-    - postgres11
-    - postgres12
     - postgres13
     - postgres14
-    - postgres9
+    - postgres15
+    - postgres16
+    - postgres17
     - postgresql
-    - redis
-    - redis6
     - springboot
     - storage
     - tomcat
-    - tomcat6
-    - tomcat7
-    - tomcat8
-    - tomcat85
     - tomcat9
+    - tomcat10
+    - tomcat11
     - tomee
     - tomee-dockerized
     - varnish
